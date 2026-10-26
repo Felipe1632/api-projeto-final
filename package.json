@@ -1,0 +1,23 @@
+{
+  "name": "api-projeto-final",
+  "version": "1.0.0",
+  "description": ">BarberHub. O Sistema irá ajudar os barbeiros a controlar os agendamentos.",
+  "main": "index.js",
+  "type": "module",
+"scripts": {
+  "dev": "node --watch --env-file=.env src/server.js",
+  "start": "node src/server.js"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Felipe1632/api-projeto-final.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Felipe1632/api-projeto-final/issues"
+  },
+  "homepage": "https://github.com/Felipe1632/api-projeto-final#readme"
+}
