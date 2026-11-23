@@ -1,12 +1,18 @@
-import { Router } from "express";
-import { listarServicos, buscarServicoPorId, criarServico, atualizarServico, excluirServico } from "../controllers/servicosController.js";
+import { Router } from 'express';
+import {
+  listar,
+  buscarPorId,
+  criar,
+  atualizar,
+  excluir,
+} from '../controllers/servicosController.js';
 
 const router = Router();
 
-router.get('/', listarServicos);
-router.get('/:id', buscarServicoPorId);
-router.post('/', criarServico);
-router.put('/:id', atualizarServico);
-router.delete('/:id', excluirServico);
+router.get('/', listar);
+router.get('/:id', buscarPorId);
+router.post('/', criar);
+router.put('/:id', atualizar);
+router.delete('/:id', excluir);
 
 export default router;

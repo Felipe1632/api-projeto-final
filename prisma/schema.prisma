@@ -19,20 +19,20 @@ model Usuario {
 model Categoria {
   id       Int       @id @default(autoincrement())
   nome     String    @unique
-  chamados Chamado[]
+  servicos Servico[]
 
   @@map("categorias")
 }
 
-model Chamado {
+model Servico {
   id          Int       @id @default(autoincrement())
-  titulo      String
-  descricao   String?
-  prioridade  String    @default("media")
-  status      String    @default("aberto")
+  nome        String
+  duracaoMin  Int       @default(30)
+  preco       Decimal   @default(0) @db.Decimal(10, 2)
+  status      String    @default("ativo")
   categoriaId Int
   categoria   Categoria @relation(fields: [categoriaId], references: [id])
   criadoEm    DateTime  @default(now())
 
-  @@map("chamados")
+  @@map("servicos")
 }

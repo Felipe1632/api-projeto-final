@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --env-file=.env src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "seed": "node --env-file=.env prisma/seed.js"
   },
   "repository": {
     "type": "git",

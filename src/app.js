@@ -3,6 +3,8 @@ import express from 'express';
 import categoriasRoutes from './routes/categoriasRoutes.js';
 import servicosRoutes from './routes/servicosRoutes.js';
 import usuariosRoutes from './routes/usuariosRoutes.js';
+import { ErroApi } from './erros.js';
+
 
 const app = express();
 
@@ -44,9 +46,19 @@ app.use((req, res) => {
 });
 
 // Tratamento de erros: JSON mal escrito ou falha inesperada (sempre por último)
+// Tratamento de erros: sempre o último app.use. Todo erro sai no mesmo formato.
 app.use((erro, req, res, next) => {
+  // erros que nós mesmos lançamos com throw new ErroApi(...)
+  if (erro instanceof ErroApi) {
+    return res.status(erro.status).json({ erro: erro.message, detalhes: erro.detalhes });
+  }
+  // JSON mal escrito no corpo da requisição
   if (erro.type === 'entity.parse.failed') {
     return res.status(400).json({ erro: 'JSON inválido no corpo da requisição' });
+  }
+  // Prisma: valor repetido num campo único (@unique)
+  if (erro.code === 'P2002') {
+    return res.status(409).json({ erro: 'Já existe um registro com esse valor' });
   }
   console.error(erro);
   res.status(500).json({ erro: 'Erro interno no servidor' });

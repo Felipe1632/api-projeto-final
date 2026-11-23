@@ -1,101 +1,120 @@
-// Controller: as regras de cada operação do recurso "servicos".
-import { servicos } from '../data/servicos.js';
+import { prisma } from '../lib/prisma.js';
+import { ErroApi } from '../erros.js';
 
-// GET /api/servicos ou /api/servicos?categoriaId=1
-export function listarServicos(req, res) {
-  const { categoriaId } = req.query;
-
-  if (categoriaId) {
-    const catId = parseInt(categoriaId, 10);
-    if (!isNaN(catId)) {
-      const servicosFiltrados = servicos.filter((s) => s.categoriaId === catId);
-      return res.json(servicosFiltrados);
-    }
+function lerId(texto) {
+  const id = Number(texto);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ErroApi(400, 'O id precisa ser um número inteiro positivo');
   }
+  return id;
+}
 
-  return res.json(servicos);
+// GET /api/servicos
+export async function listar(req, res) {
+  const servicos = await prisma.servico.findMany({
+    include: { categoria: true },
+    orderBy: { id: 'asc' },
+  });
+  res.json(servicos);
 }
 
 // GET /api/servicos/:id
-export function buscarServicoPorId(req, res) {
-  const id = parseInt(req.params.id, 10);
-
-  if (isNaN(id)) {
-    return res.status(400).json({ erro: 'ID deve ser um número válido' });
-  }
-
-  const servico = servicos.find((s) => s.id === id);
+export async function buscarPorId(req, res) {
+  const id = lerId(req.params.id);
+  const servico = await prisma.servico.findUnique({
+    where: { id },
+    include: { categoria: true },
+  });
 
   if (!servico) {
-    return res.status(404).json({ erro: 'Serviço não encontrado' });
+    throw new ErroApi(404, 'Serviço não encontrado');
   }
 
-  return res.json(servico);
+  res.json(servico);
 }
 
 // POST /api/servicos
-export function criarServico(req, res) {
-  const { categoriaId, nome, preco, duracaoMinutos } = req.body ?? {};
+export async function criar(req, res) {
+  const { nome, duracaoMin, preco, status, categoriaId } = req.body ?? {};
+  const erros = [];
 
-  if (!nome || preco === undefined) {
-    return res.status(400).json({ erro: 'Os campos nome e preco são obrigatórios' });
+  if (typeof nome !== 'string' || nome.trim() === '') {
+    erros.push('nome é obrigatório e precisa ser um texto');
+  }
+  if (!categoriaId || !Number.isInteger(Number(categoriaId)) || Number(categoriaId) <= 0) {
+    erros.push('categoriaId é obrigatório e precisa ser um número inteiro positivo');
+  }
+  if (duracaoMin !== undefined && (!Number.isInteger(Number(duracaoMin)) || Number(duracaoMin) <= 0)) {
+    erros.push('duracaoMin precisa ser um número inteiro maior que zero');
+  }
+  if (preco !== undefined && (isNaN(Number(preco)) || Number(preco) < 0)) {
+    erros.push('preco precisa ser um número maior ou igual a zero');
   }
 
-  const novoId = servicos.length > 0 ? servicos[servicos.length - 1].id + 1 : 1;
+  if (erros.length > 0) {
+    throw new ErroApi(400, 'Dados inválidos', erros);
+  }
 
-  const novo = {
-    id: novoId,
-    categoriaId: categoriaId ?? 1,
-    nome,
-    preco: Number(preco),
-    duracaoMinutos: duracaoMinutos ?? 30,
-  };
+  const categoria = await prisma.categoria.findUnique({
+    where: { id: Number(categoriaId) },
+  });
+  if (!categoria) {
+    throw new ErroApi(400, 'categoriaId não existe');
+  }
 
-  servicos.push(novo);
-  return res.status(201).json(novo);
+  const novo = await prisma.servico.create({
+    data: {
+      nome: nome.trim(),
+      duracaoMin: duracaoMin !== undefined ? Number(duracaoMin) : undefined,
+      preco: preco !== undefined ? Number(preco) : undefined,
+      status: status ?? undefined,
+      categoriaId: categoria.id,
+    },
+    include: { categoria: true },
+  });
+
+  res.status(201).json(novo);
 }
 
 // PUT /api/servicos/:id
-export function atualizarServico(req, res) {
-  const id = parseInt(req.params.id, 10);
+export async function atualizar(req, res) {
+  const id = lerId(req.params.id);
+  const existe = await prisma.servico.findUnique({ where: { id } });
 
-  if (isNaN(id)) {
-    return res.status(400).json({ erro: 'ID deve ser um número válido' });
+  if (!existe) {
+    throw new ErroApi(404, 'Serviço não encontrado');
   }
 
-  const posicao = servicos.findIndex((s) => s.id === id);
+  const { nome, duracaoMin, preco, status, categoriaId } = req.body ?? {};
 
-  if (posicao === -1) {
-    return res.status(404).json({ erro: 'Serviço não encontrado' });
+  if (nome !== undefined && (typeof nome !== 'string' || nome.trim() === '')) {
+    throw new ErroApi(400, 'Dados inválidos', ['nome não pode ficar vazio']);
   }
 
-  const dados = req.body ?? {};
+  const atualizado = await prisma.servico.update({
+    where: { id },
+    data: {
+      ...(nome !== undefined && { nome: nome.trim() }),
+      ...(duracaoMin !== undefined && { duracaoMin: Number(duracaoMin) }),
+      ...(preco !== undefined && { preco: Number(preco) }),
+      ...(status !== undefined && { status }),
+      ...(categoriaId !== undefined && { categoriaId: Number(categoriaId) }),
+    },
+    include: { categoria: true },
+  });
 
-  if (dados.nome === '') {
-    return res.status(400).json({ erro: 'O campo nome não pode ficar vazio' });
-  }
-
-  // Junta o que já existia com o que chegou; o id nunca muda
-  const atualizado = { ...servicos[posicao], ...dados, id };
-  servicos[posicao] = atualizado;
-
-  return res.json(atualizado);
+  res.json(atualizado);
 }
 
 // DELETE /api/servicos/:id
-export function excluirServico(req, res) {
-  const id = parseInt(req.params.id, 10);
+export async function excluir(req, res) {
+  const id = lerId(req.params.id);
+  const existe = await prisma.servico.findUnique({ where: { id } });
 
-  if (isNaN(id)) {
-    return res.status(400).json({ erro: 'ID deve ser um número válido' });
+  if (!existe) {
+    throw new ErroApi(404, 'Serviço não encontrado');
   }
 
-  const posicao = servicos.findIndex((s) => s.id === id);
-
-  if (posicao === -1) {
-    return res.status(404).json({ erro: 'Serviço não encontrado' });
-  }
-
-  servicos.splice(posicao, 1);
-  return res.status(204).send();
+  await prisma.servico.delete({ where: { id } });
+  res.status(204).send();
 }
