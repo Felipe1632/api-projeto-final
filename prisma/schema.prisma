@@ -27,9 +27,11 @@ model Categoria {
 model Servico {
   id          Int       @id @default(autoincrement())
   nome        String
+  descricao   String?
   duracaoMin  Int       @default(30)
   preco       Decimal   @default(0) @db.Decimal(10, 2)
   status      String    @default("ativo")
+  imagemUrl   String?
   categoriaId Int
   categoria   Categoria @relation(fields: [categoriaId], references: [id])
   criadoEm    DateTime  @default(now())
